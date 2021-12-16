@@ -90,6 +90,7 @@ $('#current_page').on('keypress', (event) => {
   }
 });
 
+// Zoom functionality
 $('#zoom_in').on('click', () => {
   if ($initialState.pdfDoc === null) return;
   $initialState.zoom += 0.3;

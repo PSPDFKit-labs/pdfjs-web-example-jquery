@@ -71,34 +71,35 @@ function showNextPage() {
 $('#prev-page').click(showPrevPage);
 $('#next-page').click(showNextPage);
 
-// Display a Specific Page
+// Display a specific page
 $('#current_page').on('keypress', (event) => {
   if ($initialState.pdfDoc === null) return;
-
+  // get the key code
   const $keycode = event.keyCode ? event.keyCode : event.which;
-
   if ($keycode === 13) {
     // get the new page number and render it
     let desiredPage = $('#current_page')[0].valueAsNumber;
-    if (
-      desiredPage >= 1 &&
-      desiredPage <= $initialState.pdfDoc._pdfInfo.numPages
-    ) {
-      $initialState.currentPage = desiredPage;
-      renderPage();
-    }
+
+    $initialState.currentPage = Math.min(
+      Math.max(desiredPage, 1),
+      $initialState.pdfDoc._pdfInfo.numPages
+    );
+    renderPage();
+
+    $('#current_page').val($initialState.currentPage);
   }
 });
 
 // Zoom functionality
 $('#zoom_in').on('click', () => {
   if ($initialState.pdfDoc === null) return;
-  $initialState.zoom += 0.3;
+  $initialState.zoom *= 4 / 3;
+
   renderPage();
 });
 
 $('#zoom_out').on('click', () => {
   if ($initialState.pdfDoc === null) return;
-  $initialState.zoom -= 0.3;
+  $initialState.zoom *= 2 / 3;
   renderPage();
 });

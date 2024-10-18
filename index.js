@@ -1,6 +1,12 @@
-const $pdf = 'document.pdf';
+const pdf = 'document.pdf';
 
-const $initialState = {
+// Import the necessary module from pdf.js
+import { GlobalWorkerOptions, getDocument } from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.min.mjs';
+
+// Set worker source
+GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@4.5.136/build/pdf.worker.min.mjs';
+
+const initialState = {
   pdfDoc: null,
   currentPage: 1,
   pageCount: 0,
@@ -9,97 +15,86 @@ const $initialState = {
 
 // Render the page
 const renderPage = () => {
-  // load the first page
-  $initialState.pdfDoc.getPage($initialState.currentPage).then((page) => {
-    console.log('page', page);
+  initialState.pdfDoc.getPage(initialState.currentPage).then((page) => {
+    const canvas = $("#canvas")[0];
+    const ctx = canvas.getContext("2d");
+    const viewport = page.getViewport({ scale: initialState.zoom });
 
-    const canvas = $('#canvas')[0];
-    const $ctx = canvas.getContext('2d');
-    const $viewport = page.getViewport({ scale: $initialState.zoom });
-
-    canvas.height = $viewport.height;
-    canvas.width = $viewport.width;
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
 
     // Render PDF page into canvas context
     const renderCtx = {
-      canvasContext: $ctx,
-      viewport: $viewport,
+      canvasContext: ctx,
+      viewport: viewport,
     };
 
     page.render(renderCtx);
 
-    $('#page_num').html($initialState.currentPage);
+    // Update current page number
+    $("#page_num").text(initialState.currentPage);
   });
 };
 
 // Load the Document
-pdfjsLib
-  .getDocument($pdf)
-  .promise.then((doc) => {
-    $initialState.pdfDoc = doc;
-    console.log('pdfDocument', $initialState.pdfDoc);
+getDocument(pdf).promise.then((data) => {
+  initialState.pdfDoc = data;
+  $("#page_count").text(initialState.pdfDoc.numPages);
 
-    $('#page_count').html($initialState.pdfDoc.numPages);
-
-    renderPage();
-  })
-  .catch((err) => {
-    alert(err.message);
-  });
-
-function showPrevPage() {
-  if ($initialState.pdfDoc === null || $initialState.currentPage <= 1) return;
-  $initialState.currentPage--;
-  // render the current page
-  $('#current_page').val($initialState.currentPage);
   renderPage();
-}
+}).catch((err) => {
+  alert(err.message);
+});
 
-function showNextPage() {
-  if (
-    $initialState.pdfDoc === null ||
-    $initialState.currentPage >= $initialState.pdfDoc._pdfInfo.numPages
-  )
-    return;
-
-  $initialState.currentPage++;
-  $('#current_page').val($initialState.currentPage);
+// Show Previous Page
+const showPrevPage = () => {
+  if (initialState.pdfDoc === null || initialState.currentPage <= 1) return;
+  initialState.currentPage--;
+  $("#current_page").val(initialState.currentPage);
   renderPage();
-}
+};
 
-// Button Events
-$('#prev-page').click(showPrevPage);
-$('#next-page').click(showNextPage);
+// Show Next Page
+const showNextPage = () => {
+  if (initialState.pdfDoc === null || initialState.currentPage >= initialState.pdfDoc.numPages) return;
+  initialState.currentPage++;
+  $("#current_page").val(initialState.currentPage);
+  renderPage();
+};
 
-// Display a specific page
-$('#current_page').on('keypress', (event) => {
-  if ($initialState.pdfDoc === null) return;
-  // get the key code
-  const $keycode = event.keyCode ? event.keyCode : event.which;
-  if ($keycode === 13) {
-    // get the new page number and render it
-    let desiredPage = $('#current_page')[0].valueAsNumber;
+// Zoom In
+const zoomIn = () => {
+  if (initialState.pdfDoc === null) return;
+  initialState.zoom *= 1.25;
+  renderPage();
+};
 
-    $initialState.currentPage = Math.min(
-      Math.max(desiredPage, 1),
-      $initialState.pdfDoc._pdfInfo.numPages
-    );
+// Zoom Out
+const zoomOut = () => {
+  if (initialState.pdfDoc === null) return;
+  initialState.zoom *= 0.8;
+  renderPage();
+};
+
+// Bind events using jQuery
+$("#prev_page").on("click", showPrevPage);
+$("#next_page").on("click", showNextPage);
+$("#zoom_in").on("click", zoomIn);
+$("#zoom_out").on("click", zoomOut);
+
+// Keypress Event for jumping to a page
+$("#current_page").on("keypress", (event) => {
+  if (initialState.pdfDoc === null) return;
+
+  if (event.keyCode === 13) {
+    let desiredPage = parseInt($("#current_page").val());
+    initialState.currentPage = Math.min(Math.max(desiredPage, 1), initialState.pdfDoc.numPages);
+    $("#current_page").val(initialState.currentPage);
     renderPage();
-
-    $('#current_page').val($initialState.currentPage);
   }
 });
 
-// Zoom functionality
-$('#zoom_in').on('click', () => {
-  if ($initialState.pdfDoc === null) return;
-  $initialState.zoom *= 4 / 3;
-
-  renderPage();
-});
-
-$('#zoom_out').on('click', () => {
-  if ($initialState.pdfDoc === null) return;
-  $initialState.zoom *= 2 / 3;
-  renderPage();
+// Optional Print Support
+$(".print-button").on("click", () => {
+  window.print();
 });
